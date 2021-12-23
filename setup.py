@@ -4,7 +4,7 @@ from setuptools import setup
 
 setup(
     name='target-sftp',
-    version='1.0.0',
+    version='1.0.1',
     description='hotglue target for exporting data to sftp',
     author='hotglue',
     url='https://hotglue.xyz',
