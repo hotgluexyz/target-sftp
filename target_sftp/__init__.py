@@ -49,7 +49,6 @@ def upload(args):
     for root, dirs, files in os.walk(config["input_path"]):
         for file in files:
             file_path = os.path.join(root, file)
-            remote_file_path = file_path.replace(config["input_path"], f"{config['path_prefix']}/")
             try:
                 sftp_client.chdir(config["path_prefix"])
             except IOError:
