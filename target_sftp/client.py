@@ -3,7 +3,7 @@ import os
 import re
 import stat
 import time
-
+import StringIO
 import backoff
 import paramiko
 import singer
@@ -20,7 +20,7 @@ def handle_backoff(details):
 
 
 class SFTPConnection():
-    def __init__(self, host, username, password=None, private_key_file=None, port=None):
+    def __init__(self, host, username, password=None, private_key_file=None, private_key=None, port=None):
         self.host = host
         self.username = username
         self.password = password
@@ -32,7 +32,9 @@ class SFTPConnection():
         if private_key_file:
             key_path = os.path.expanduser(private_key_file)
             self.key = paramiko.RSAKey.from_private_key_file(key_path)
-
+        else:
+            key = StringIO.StringIO(private_key)
+            self.private_key = paramiko.RSAKey.from_private_key(key)
     # If connection is snapped during connect flow, retry up to a
     # minute for SSH connection to succeed. 2^6 + 2^5 + ...
     @backoff.on_exception(
@@ -48,7 +50,10 @@ class SFTPConnection():
                 LOGGER.info('Creating new connection to SFTP...')
                 self.transport = paramiko.Transport((self.host, self.port))
                 self.transport.use_compression(True)
-                self.transport.connect(username=self.username, password=self.password, hostkey=None, pkey=self.key)
+                if self.key:
+                    self.transport.connect(username=self.username, password=self.password, hostkey=None, pkey=self.key)
+                else:
+                    self.transport.connect(username=self.username, pkey=self.private_key)
                 self.__sftp = paramiko.SFTPClient.from_transport(self.transport)
                 LOGGER.info('Connection successful')
                 break
@@ -91,4 +96,5 @@ def connection(config):
                           config['username'],
                           password=config.get('password'),
                           private_key_file=config.get('private_key_file'),
+                          private_key = config.get('private_key'),
                           port=config.get('port'))
