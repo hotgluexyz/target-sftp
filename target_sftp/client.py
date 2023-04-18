@@ -50,8 +50,7 @@ class SFTPConnection():
                 LOGGER.info('Creating new connection to SFTP...')
                 self.transport = paramiko.Transport((self.host, self.port))
                 self.transport.use_compression(True)
-                if self.key:
-                    self.transport.connect(username=self.username, password=self.password, hostkey=None, pkey=self.key)
+                self.transport.connect(username=self.username, password=self.password, hostkey=None, pkey=self.key)
                 self.__sftp = paramiko.SFTPClient.from_transport(self.transport)
                 LOGGER.info('Connection successful')
                 break
