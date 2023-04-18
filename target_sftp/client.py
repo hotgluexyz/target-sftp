@@ -34,7 +34,7 @@ class SFTPConnection():
             self.key = paramiko.RSAKey.from_private_key_file(key_path)
         else:
             key = StringIO.StringIO(private_key)
-            self.private_key = paramiko.RSAKey.from_private_key(key)
+            self.key = paramiko.RSAKey.from_private_key(key)
     # If connection is snapped during connect flow, retry up to a
     # minute for SSH connection to succeed. 2^6 + 2^5 + ...
     @backoff.on_exception(
@@ -52,8 +52,6 @@ class SFTPConnection():
                 self.transport.use_compression(True)
                 if self.key:
                     self.transport.connect(username=self.username, password=self.password, hostkey=None, pkey=self.key)
-                else:
-                    self.transport.connect(username=self.username, pkey=self.private_key)
                 self.__sftp = paramiko.SFTPClient.from_transport(self.transport)
                 LOGGER.info('Connection successful')
                 break
