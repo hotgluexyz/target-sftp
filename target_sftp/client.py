@@ -32,8 +32,8 @@ class SFTPConnection():
         if private_key_file:
             key_path = os.path.expanduser(private_key_file)
             self.key = paramiko.RSAKey.from_private_key_file(key_path)
-        else:
-            key_string = StringIO.StringIO(private_key)
+        if private_key:
+            key_string = StringIO(private_key)
             self.key = paramiko.RSAKey.from_private_key(key_string)
     # If connection is snapped during connect flow, retry up to a
     # minute for SSH connection to succeed. 2^6 + 2^5 + ...
