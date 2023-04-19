@@ -3,7 +3,7 @@ import os
 import re
 import stat
 import time
-import StringIO
+from io import StringIO
 import backoff
 import paramiko
 import singer
