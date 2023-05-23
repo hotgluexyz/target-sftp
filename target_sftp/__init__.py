@@ -38,6 +38,7 @@ def parse_args():
     return args
 
 
+
 def upload(args):
     logger.info(f"Exporting data...")
     config = args.config
@@ -45,18 +46,37 @@ def upload(args):
     # Upload all data in input_path to sftp
     sftp_conection = client.connection(config)
     sftp_client = sftp_conection.sftp
+    output_path = config["path_prefix"]
+    try: 
+        # check if structure exists before changing
+        sftp_client.chdir(output_path) #will change if folder already exists
+    except IOError:
+        sftp_client.mkdir(output_path)
+        logger.info(f"Creating output path at {sftp_client.getcwd()}")
+        sftp_client.chdir(output_path)
+
 
     for root, dirs, files in os.walk(config["input_path"]):
-        for file in files:
-            file_path = os.path.join(root, file)
-            try:
-                sftp_client.chdir(config["path_prefix"])
-            except IOError:
-                sftp_client.mkdir(config["path_prefix"])
-                sftp_client.chdir(config["path_prefix"])
-            logger.info(f"Uploading {file} to {config['path_prefix']}")
-            sftp_client.put(file_path, file)
+        head, cwd = os.path.split(root) #get cwd in tree
+        if cwd:
+            sftp_client.chdir(cwd) #put sftp in the same place
 
+        for dir in dirs:
+            if dir not in sftp_client.listdir(): #check to see if directory already in sftp, make if it isn't there
+                logger.info(f"Creating folder {dir} at {sftp_client.getcwd()}")
+                sftp_client.mkdir(dir)
+
+        
+        for file in files: #upload all files
+            file_path = os.path.join(root, file)
+            logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.getcwd()}")
+            sftp_client.put(file_path, file)
+        
+        if cwd and not dirs: ## If dirs is empty then there are NO subfolders that need to be populated, safe to go back
+            sftp_client.chdir("..")
+        
+        
+        
     sftp_conection.close()
     logger.info(f"Data exported.")
 
