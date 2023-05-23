@@ -43,6 +43,7 @@ def make_or_change_directory(sftp_client,dir,create_and_move=False):
     except IOError:
         sftp_client.mkdir(dir)
         if create_and_move:
+            logger.info(f"Creating folder {dir} at {sftp_client.cwd()}")
             sftp_client.chdir(dir)
 
 
@@ -61,13 +62,12 @@ def upload(args):
         head, cwd = os.path.split(root)
         if cwd:
             sftp_client.chdir(cwd)
-
         for dir in dirs:
             make_or_change_directory(sftp_client, dir)
         
         for file in files:
             file_path = os.path.join(root, file)
-            logger.info(f"Uploading {file} to {config['path_prefix']}")
+            logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.cwd()}")
             sftp_client.put(file_path, file)
         
         if cwd:
