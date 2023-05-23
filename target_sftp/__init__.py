@@ -37,6 +37,14 @@ def parse_args():
 
     return args
 
+def make_or_change_directory(sftp_client,dir,create_and_move=False):
+    try: 
+        sftp_client.chdir(dir)
+    except IOError:
+        sftp_client.mkdir(dir)
+        if create_and_move:
+            sftp_client.chdir(dir)
+
 
 def upload(args):
     logger.info(f"Exporting data...")
@@ -46,17 +54,27 @@ def upload(args):
     sftp_conection = client.connection(config)
     sftp_client = sftp_conection.sftp
 
+    make_or_change_directory(sftp_client,config["path_prefix"],True)
+
+
     for root, dirs, files in os.walk(config["input_path"]):
+        head, cwd = os.path.split(root)
+        if cwd:
+            sftp_client.chdir(cwd)
+
+        for dir in dirs:
+            make_or_change_directory(sftp_client, dir)
+        
         for file in files:
             file_path = os.path.join(root, file)
-            try:
-                sftp_client.chdir(config["path_prefix"])
-            except IOError:
-                sftp_client.mkdir(config["path_prefix"])
-                sftp_client.chdir(config["path_prefix"])
             logger.info(f"Uploading {file} to {config['path_prefix']}")
             sftp_client.put(file_path, file)
-
+        
+        if cwd:
+            sftp_client.chdir("..")
+        
+        
+        
     sftp_conection.close()
     logger.info(f"Data exported.")
 
