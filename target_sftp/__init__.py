@@ -37,14 +37,6 @@ def parse_args():
 
     return args
 
-def make_or_change_directory(sftp_client,dir,create_and_move=False):
-    try: 
-        sftp_client.chdir(dir)
-    except IOError:
-        sftp_client.mkdir(dir)
-        if create_and_move:
-            logger.info(f"Creating folder {dir} at {sftp_client.cwd()}")
-            sftp_client.chdir(dir)
 
 
 def upload(args):
@@ -54,23 +46,33 @@ def upload(args):
     # Upload all data in input_path to sftp
     sftp_conection = client.connection(config)
     sftp_client = sftp_conection.sftp
-
-    make_or_change_directory(sftp_client,config["path_prefix"],True)
+    output_path = config["path_prefix"]
+    try: 
+        # check if structure exists before changing
+        sftp_client.chdir(output_path) #will change if folder already exists
+    except IOError:
+        sftp_client.mkdir(output_path)
+        logger.info(f"Creating output path at {sftp_client.getcwd()}")
+        sftp_client.chdir(output_path)
 
 
     for root, dirs, files in os.walk(config["input_path"]):
-        head, cwd = os.path.split(root)
+        head, cwd = os.path.split(root) #get cwd in tree
         if cwd:
-            sftp_client.chdir(cwd)
+            sftp_client.chdir(cwd) #put sftp in the same place
+
         for dir in dirs:
-            make_or_change_directory(sftp_client, dir)
+            if dir not in sftp_client.listdir(): #check to see if directory already in sftp, make if it isn't there
+                logger.info(f"Creating folder {dir} at {sftp_client.getcwd()}")
+                sftp_client.mkdir(dir)
+
         
-        for file in files:
+        for file in files: #upload all files
             file_path = os.path.join(root, file)
-            logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.cwd()}")
+            logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.getcwd()}")
             sftp_client.put(file_path, file)
         
-        if cwd:
+        if cwd and not dirs: ## If dirs is empty then there are NO subfolders that need to be populated, safe to go back
             sftp_client.chdir("..")
         
         
