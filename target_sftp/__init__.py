@@ -46,7 +46,6 @@ def upload(args):
     ## I don't think preserving directory structure matters, a nice to have, but error-prone
     sftp_conection = client.connection(config)
     sftp_client = sftp_conection.sftp
-    sftp_client.chdir("share")
     output_path = config["path_prefix"]
     for dir in output_path.lstrip("/").rstrip("/").split("/"):
         try: 
