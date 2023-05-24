@@ -44,16 +44,19 @@ def upload(args):
     config = args.config
 
     # Upload all data in input_path to sftp
+    ## I don't think preserving directory structure matters, a nice to have, but error-prone
     sftp_conection = client.connection(config)
     sftp_client = sftp_conection.sftp
+    
     output_path = config["path_prefix"]
-    try: 
-        # check if structure exists before changing
-        sftp_client.chdir(output_path) #will change if folder already exists
-    except IOError:
-        sftp_client.mkdir(output_path)
-        logger.info(f"Creating output path at {sftp_client.getcwd()}")
-        sftp_client.chdir(output_path)
+    for dir in output_path.lstrip("/").split("/"):
+        try: 
+            # check if structure exists before changing
+            sftp_client.chdir(dir) #will change if folder already exists
+        except IOError:
+            sftp_client.mkdir(dir)
+            logger.info(f"Creating output path at {sftp_client.getcwd()}")
+            sftp_client.chdir(dir)
 
 
     for root, dirs, files in os.walk(config["input_path"]):
