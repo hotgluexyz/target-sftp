@@ -42,14 +42,13 @@ def parse_args():
 def upload(args):
     logger.info(f"Exporting data...")
     config = args.config
-
     # Upload all data in input_path to sftp
     ## I don't think preserving directory structure matters, a nice to have, but error-prone
     sftp_conection = client.connection(config)
     sftp_client = sftp_conection.sftp
     
     output_path = config["path_prefix"]
-    for dir in output_path.lstrip("/").split("/"):
+    for dir in output_path.lstrip("/").rstrip("/").split("/"):
         try: 
             # check if structure exists before changing
             sftp_client.chdir(dir) #will change if folder already exists
@@ -60,23 +59,12 @@ def upload(args):
 
 
     for root, dirs, files in os.walk(config["input_path"]):
-        head, cwd = os.path.split(root) #get cwd in tree
-        if cwd:
-            sftp_client.chdir(cwd) #put sftp in the same place
-
-        for dir in dirs:
-            if dir not in sftp_client.listdir(): #check to see if directory already in sftp, make if it isn't there
-                logger.info(f"Creating folder {dir} at {sftp_client.getcwd()}")
-                sftp_client.mkdir(dir)
-
         
         for file in files: #upload all files
             file_path = os.path.join(root, file)
             logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.getcwd()}")
             sftp_client.put(file_path, file)
         
-        if cwd and not dirs: ## If dirs is empty then there are NO subfolders that need to be populated, safe to go back
-            sftp_client.chdir("..")
         
         
         
