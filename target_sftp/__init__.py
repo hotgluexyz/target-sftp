@@ -58,13 +58,29 @@ def upload(args):
 
 
     for root, dirs, files in os.walk(config["input_path"]):
+        for dir in dirs:
+            try:
+                sftp_client.mkdir(dir)
+                logger.info(f"Created remote folder {dir}")
+            except:
+                logger.info(f"Remote folder {dir} already exists")
         
         for file in files: #upload all files
             file_path = os.path.join(root, file)
+            stripped_file_path = file_path.replace(config['input_path'] + "/", "")
+            prev_cwd = None
+
+            if "/" in stripped_file_path:
+                prev_cwd = sftp_client.getcwd()
+                # Go into the folder
+                sftp_client.chdir(stripped_file_path.split("/")[0])
+
+            # Save the file
             logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.getcwd()}")
             sftp_client.put(file_path, file)
-        
-        
+
+            if prev_cwd is not None:
+                sftp_client.chdir(prev_cwd)
         
         
     sftp_conection.close()
