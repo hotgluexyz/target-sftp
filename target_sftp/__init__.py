@@ -81,7 +81,7 @@ def upload(args):
 
             # Save the file
             logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.getcwd()}")
-            # sftp_client.put(file_path, file)
+            sftp_client.put(file_path, file)
 
             if prev_cwd is not None:
                 sftp_client.chdir(prev_cwd)
