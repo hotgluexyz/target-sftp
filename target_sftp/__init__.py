@@ -59,6 +59,7 @@ def upload(args):
             sftp_client.chdir(dir)
         except Exception as e:
             logger.info(f"Failed to create folder path at {sftp_client.getcwd()}. Folder skipped {dir}. Error message {e}")
+            raise NotADirectoryError
 
 
     for root, dirs, files in os.walk(config["input_path"]):
