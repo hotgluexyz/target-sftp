@@ -58,6 +58,7 @@ def upload(args):
                 sftp_client.chdir(dir)
             except Exception as e:
                 logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
+                raise e
 
 
     for root, dirs, files in os.walk(config["input_path"]):
