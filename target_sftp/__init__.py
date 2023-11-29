@@ -52,9 +52,13 @@ def upload(args):
             # check if structure exists before changing
             sftp_client.chdir(dir) #will change if folder already exists
         except IOError:
-            sftp_client.mkdir(dir)
-            logger.info(f"Creating output path at {sftp_client.getcwd()}")
-            sftp_client.chdir(dir)
+            try:
+                sftp_client.mkdir(dir)
+                logger.info(f"Creating output path at {sftp_client.getcwd()}")
+                sftp_client.chdir(dir)
+            except Exception as e:
+                logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
+                raise e
 
 
     for root, dirs, files in os.walk(config["input_path"]):
