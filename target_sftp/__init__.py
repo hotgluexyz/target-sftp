@@ -5,7 +5,6 @@ import argparse
 import logging
 
 from target_sftp import client
-# from client import client
 
 logger = logging.getLogger("target-sftp")
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
