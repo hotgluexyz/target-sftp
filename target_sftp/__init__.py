@@ -57,6 +57,7 @@ def upload(args):
                 pass
 
             # Switch into the dir if it exists
+            logger.info(f"Changing directory to {dir}")
             sftp_client.chdir(dir) #will change if folder already exists
         except Exception as e:
             logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
@@ -70,7 +71,7 @@ def upload(args):
                 logger.info(f"Created remote folder {dir}")
             except:
                 logger.info(f"Remote folder {dir} already exists")
-        
+
         for file in files: #upload all files
             file_path = os.path.join(root, file)
             stripped_file_path = file_path.replace(config['input_path'] + "/", "",1)
@@ -81,14 +82,23 @@ def upload(args):
                 # Go into the folder
                 sftp_client.chdir(stripped_file_path.split("/")[0])
 
+            # Runs a stat on the folder
+            logger.info(
+                "Current folder stat: " + sftp_client.stat(sftp_client.getcwd())
+            )
+
+            logger.info(
+                "Path prefix folder stat: " + sftp_client.stat(config["path_prefix"])
+            )
+
             # Save the file
             logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.getcwd()}")
-            sftp_client.put(file_path, file)
+            sftp_client.put(file_path, file, confirm=False)
 
             if prev_cwd is not None:
                 sftp_client.chdir(prev_cwd)
-        
-        
+
+
     sftp_conection.close()
     logger.info(f"Data exported.")
 
