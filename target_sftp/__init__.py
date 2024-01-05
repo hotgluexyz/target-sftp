@@ -90,13 +90,6 @@ def upload(args):
                 sftp_client.stat(sftp_client.getcwd())
             )
 
-            logger.info(
-                "Path prefix folder stat: "
-            )
-            logger.info(
-                sftp_client.stat(config["path_prefix"])
-            )
-
             # Save the file
             logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.getcwd()}")
             sftp_client.put(file_path, file, confirm=False)
