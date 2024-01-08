@@ -55,7 +55,8 @@ def upload(args):
                 # First attempt to create the folder
                 try:
                     sftp_client.mkdir(dir)
-                except:
+                except Exception as e:
+                    logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
                     # If it already exists, we ignore
                     pass
 
