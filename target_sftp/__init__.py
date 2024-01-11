@@ -37,6 +37,14 @@ def parse_args():
 
     return args
 
+def log_directories(sftp_client,remote_directory,key="ExportPath"):
+    dir_entries = sftp_client.listdir_attr(remote_directory)
+
+    # Print detailed information about each entry
+    for entry in dir_entries:
+        # Extract permissions from st_mode
+        permissions = oct(entry.st_mode)[-3:]
+        logger.info(f"{key}Log: Name: {entry.filename}, Permissions: {permissions}, Size: {entry.st_size}, Modified: {entry.st_mtime}")
 
 
 def upload(args):
@@ -59,7 +67,7 @@ def upload(args):
                     logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
                     # If it already exists, we ignore
                     pass
-
+                log_directories(sftp_client,dir)    
                 # Switch into the dir if it exists
                 sftp_client.chdir(dir) #will change if folder already exists
             except Exception as e:
@@ -73,7 +81,7 @@ def upload(args):
                 logger.info(f"Created remote folder {dir}")
             except:
                 logger.info(f"Remote folder {dir} already exists")
-        
+            log_directories(sftp_client,dir,"InputPath")    
         for file in files: #upload all files
             file_path = os.path.join(root, file)
             stripped_file_path = file_path.replace(config['input_path'] + "/", "",1)
