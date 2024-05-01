@@ -73,7 +73,8 @@ def upload(args):
                 logger.info(f"Created remote folder {dir}")
             except:
                 logger.info(f"Remote folder {dir} already exists")
-        
+        if isinstance(files,list) and len(files) == 0:
+            logger.info(f"No files in {root}. Skipping...")
         for file in files: #upload all files
             file_path = os.path.join(root, file)
             stripped_file_path = file_path.replace(config['input_path'] + "/", "",1)
