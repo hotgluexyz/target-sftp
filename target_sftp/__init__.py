@@ -91,9 +91,8 @@ def upload(args):
             if prev_cwd is not None:
                 sftp_client.chdir(prev_cwd)
         
-        
+    logger.info(f"Closing SFTP connection...")
     sftp_conection.close()
-    logger.info(f"Data exported.")
 
 
 def main():
