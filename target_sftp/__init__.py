@@ -56,37 +56,43 @@ def upload(args):
                 try:
                     sftp_client.mkdir(dir)
                 except Exception as e:
-                    logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
+                    logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. Exception: {e}")
                     # If it already exists, we ignore
                     pass
 
                 # Switch into the dir if it exists
                 sftp_client.chdir(dir) #will change if folder already exists
             except Exception as e:
-                logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
+                logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. Exception: {e}")
                 raise e
 
-    for root, dirs, files in os.walk(config["input_path"]):
+    input_path = config["input_path"]
+    for root, dirs, files in os.walk(input_path):
         for dir in dirs:
             try:
-                sftp_client.mkdir(dir)
+                dir_path = dir
+                prev_folder = root.replace(input_path, "")
+                dir_path = os.path.join(prev_folder, dir)
+                dir_path = dir_path[1:] if dir_path.startswith("/") else dir_path
+                sftp_client.mkdir(dir_path)
                 logger.info(f"Created remote folder {dir}")
             except:
                 logger.info(f"Remote folder {dir} already exists")
         if isinstance(files,list) and len(files) == 0:
             logger.info(f"No files in {root}. Skipping...")
-        for file in files: #upload all files
+        # upload all files...
+        for file in files:
             file_path = os.path.join(root, file)
-            stripped_file_path = file_path.replace(config['input_path'] + "/", "",1)
+            stripped_file_path = file_path.replace(input_path + "/", "",1)
             prev_cwd = None
 
             if "/" in stripped_file_path:
                 prev_cwd = sftp_client.getcwd()
                 # Go into the folder
-                sftp_client.chdir(stripped_file_path.split("/")[0])
+                sftp_client.chdir("/".join(stripped_file_path.split("/")[0:-1]))
 
             # Save the file
-            logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.getcwd()}")
+            logger.info(f"Uploading {file} to {sftp_client.getcwd()}")
             sftp_client.put(file_path, file)
 
             if prev_cwd is not None:
