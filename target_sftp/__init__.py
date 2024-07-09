@@ -3,6 +3,7 @@ import os
 import json
 import argparse
 import logging
+import backoff
 
 from target_sftp import client
 
@@ -37,7 +38,16 @@ def parse_args():
 
     return args
 
-
+@backoff.on_exception(
+        backoff.expo,
+        (IOError,OSError),
+        max_tries=5,
+        jitter=backoff.random_jitter,
+        factor=3)
+def upload_file(file_path, file,sftp_client):
+    sftp_client.put(file_path, file)
+    
+    
 
 def upload(args):
     logger.info(f"Exporting data...")
@@ -87,7 +97,7 @@ def upload(args):
 
             # Save the file
             logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.getcwd()}")
-            sftp_client.put(file_path, file)
+            upload_file(file_path, file, sftp_client)
 
             if prev_cwd is not None:
                 sftp_client.chdir(prev_cwd)
