@@ -87,6 +87,21 @@ def upload(args):
 
             # Save the file
             logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.getcwd()}")
+
+            # if we should overwrite files we should purge existing one before upload
+            if config.get("overwrite", False):
+                # Check if the file exists on the remote server
+                try:
+                    sftp_client.stat(file)
+                    file_exists = True
+                except FileNotFoundError:
+                    file_exists = False
+
+                # If the file exists, delete it
+                if file_exists:
+                    sftp_client.remove(file)
+                    logger.info(f"Removed existing file: {file}")
+
             sftp_client.put(file_path, file)
 
             if prev_cwd is not None:
