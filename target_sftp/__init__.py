@@ -76,7 +76,7 @@ def upload(args):
                 dir_path = dir_path[1:] if dir_path.startswith("/") else dir_path
                 sftp_client.mkdir(dir_path)
                 logger.info(f"Created remote folder {dir}")
-            except:
+            except Exception as e:
                 logger.info(f"Remote folder {dir} already exists")
         if isinstance(files,list) and len(files) == 0:
             logger.info(f"No files in {root}. Skipping...")
