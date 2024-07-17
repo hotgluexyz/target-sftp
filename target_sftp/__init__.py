@@ -48,6 +48,9 @@ def upload(args):
     sftp_client = sftp_conection.sftp
     output_path = config["path_prefix"]
     export_path = output_path.lstrip("/").rstrip("/")
+    if not export_path:
+        #Set default path to root
+        export_path = "/"
 
     if export_path:
         for dir in export_path.split("/"):
