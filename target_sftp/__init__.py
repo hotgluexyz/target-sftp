@@ -59,14 +59,14 @@ def upload(args):
                 try:
                     sftp_client.mkdir(dir)
                 except Exception as e:
-                    logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
+                    # logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
                     # If it already exists, we ignore
                     pass
 
                 # Switch into the dir if it exists
                 sftp_client.chdir(dir) #will change if folder already exists
             except Exception as e:
-                logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
+                # logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
                 raise e
 
     for root, dirs, files in os.walk(config["input_path"]):
@@ -105,7 +105,7 @@ def upload(args):
                     sftp_client.remove(file)
                     logger.info(f"Removed existing file: {file}")
 
-            sftp_client.put(file_path, file)
+            sftp_client.put(file_path, file, confirm=False)
 
             if prev_cwd is not None:
                 sftp_client.chdir(prev_cwd)
