@@ -105,7 +105,8 @@ def upload(args):
                     sftp_client.remove(file)
                     logger.info(f"Removed existing file: {file}")
 
-            sftp_client.put(file_path, file, confirm=False)
+            confirm = config.get("confirm", True)
+            sftp_client.put(file_path, file, confirm=confirm)
 
             if prev_cwd is not None:
                 sftp_client.chdir(prev_cwd)
