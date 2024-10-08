@@ -55,10 +55,7 @@ class SFTPConnection():
                 LOGGER.info('Connection successful')
                 break
             except (AuthenticationException, SSHException, ConnectionResetError) as ex:
-                if self.__sftp:
-                    self.__sftp.close()
-                if self.transport:
-                    self.transport.close()
+                self.close()
                 LOGGER.info(f'Connection failed, retrying after {5*i} seconds...')
                 time.sleep(5*i)
                 LOGGER.info('Retrying now')
@@ -75,8 +72,10 @@ class SFTPConnection():
         self.__sftp = sftp
 
     def close(self):
-        self.__sftp.close()
-        self.transport.close()
+        if self.__sftp:
+            self.__sftp.close()
+        if self.transport:
+            self.transport.close()
 
     def match_files_for_table(self, files, table_name, search_pattern):
         LOGGER.info("Searching for files for table '%s', matching pattern: %s", table_name, search_pattern)
