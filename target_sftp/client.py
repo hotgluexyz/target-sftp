@@ -39,7 +39,7 @@ class SFTPConnection():
     # minute for SSH connection to succeed. 2^6 + 2^5 + ...
     @backoff.on_exception(
         backoff.expo,
-        (EOFError),
+        (EOFError, ConnectionResetError),
         max_tries=6,
         on_backoff=handle_backoff,
         jitter=None,
@@ -54,13 +54,14 @@ class SFTPConnection():
                 self.__sftp = paramiko.SFTPClient.from_transport(self.transport)
                 LOGGER.info('Connection successful')
                 break
-            except (AuthenticationException, SSHException) as ex:
+            except (AuthenticationException, SSHException, ConnectionResetError) as ex:
                 if self.__sftp:
                     self.__sftp.close()
                 if self.transport:
                     self.transport.close()
+                LOGGER.info(f'Connection failed, retrying after {5*i} seconds...')
                 time.sleep(5*i)
-                LOGGER.info('Connection failed, retrying...')
+                LOGGER.info('Retrying now')
                 if i >= (self.retries):
                     raise ex
 
