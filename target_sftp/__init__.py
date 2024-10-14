@@ -80,7 +80,7 @@ def upload_part(sftp, num, offset, part_size, local_path, remote_path):
     logger.info(f"Thread {num} done")
 
 
-def upload_file_in_chunks(sftp_client, local_path, remote_path, chunk_size=1048576):
+def upload_file_in_chunks(sftp_client, local_path, remote_path):
     logger.info("Starting to upload file...")
     offset = 0
     threads_count = 5
