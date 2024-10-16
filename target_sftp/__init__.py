@@ -109,7 +109,11 @@ def upload(args):
 
             confirm = config.get("confirm", True)
             if os.path.isfile(file_path):
-                sftp_client.put(file_path, file, confirm=confirm)
+                try:
+                    sftp_client.put(file_path, file, confirm=confirm)
+                except Exception as e:
+                    logger.info(f"Failed while trying to upload file with remote path {file_path} to {config['path_prefix']} at {sftp_client.getcwd()}")
+                    raise Exception(e)
             else:
                 raise IOError(f'Could not find localFile {file_path} !!')
 
