@@ -78,6 +78,8 @@ def upload(args):
                 logger.info(f"Remote folder {dir} already exists")
         if isinstance(files,list) and len(files) == 0:
             logger.info(f"No files in {root}. Skipping...")
+        
+        logger.info(f"Root {root}. Dirs {dirs}. Files to upload: {files}")
         for file in files: #upload all files
             file_path = os.path.join(root, file)
             stripped_file_path = file_path.replace(config['input_path'] + "/", "",1)
@@ -89,7 +91,7 @@ def upload(args):
                 sftp_client.chdir(stripped_file_path.split("/")[0])
 
             # Save the file
-            logger.info(f"Uploading {file} to {config['path_prefix']} at {sftp_client.getcwd()}")
+            logger.info(f"Uploading {file} with local path {file_path} to {config['path_prefix']} at {sftp_client.getcwd()}")
 
             # if we should overwrite files we should purge existing one before upload
             if config.get("overwrite", False):
@@ -106,7 +108,14 @@ def upload(args):
                     logger.info(f"Removed existing file: {file}")
 
             confirm = config.get("confirm", True)
-            sftp_client.put(file_path, file, confirm=confirm)
+            if os.path.isfile(file_path):
+                try:
+                    sftp_client.put(file_path, file, confirm=confirm)
+                except Exception as e:
+                    logger.info(f"Failed while trying to upload file with remote path {file_path} to {config['path_prefix']} at {sftp_client.getcwd()}")
+                    raise Exception(e)
+            else:
+                raise IOError(f'Could not find localFile {file_path} !!')
 
             if prev_cwd is not None:
                 sftp_client.chdir(prev_cwd)
