@@ -13,7 +13,7 @@ setup(
     install_requires=[
         'argparse==1.4.0',
         'singer-python==5.9.0',
-        'paramiko==2.8.0',
+        'paramiko==3.5.0',
         'backoff==1.8.0',
     ],
     entry_points='''
