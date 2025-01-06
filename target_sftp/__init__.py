@@ -40,6 +40,19 @@ def parse_args():
 
 
 def upload(args):
+    logger.info("Checking if there is at least one file to upload...")
+    if not os.path.exists(args.config["input_path"]):
+        raise Exception(f"Input path {args.config['input_path']} does not exist")
+    has_files = False
+    for root, dirs, files in os.walk(args.config["input_path"]):
+        if len(files) > 0:
+            has_files = True
+            logger.info(f"Found {len(files)} files in {root}")
+            break
+    if not has_files:
+        logger.info(f"No files to upload in {args.config['input_path']}")
+        return
+    
     logger.info(f"Exporting data...")
     config = args.config
     # Upload all data in input_path to sftp
