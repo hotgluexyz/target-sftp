@@ -116,6 +116,14 @@ def upload(args):
                 # Add .tmp extension for upload
                 temp_remote_file = f"{file}.tmp"
                 
+                # Check if temp file already exists and remove it
+                try:
+                    sftp_client.stat(temp_remote_file)
+                    logger.info(f"Found existing temporary file {temp_remote_file}, removing it...")
+                    sftp_client.remove(temp_remote_file)
+                except FileNotFoundError:
+                    pass
+                
                 logger.info(f"Uploading {file} with local path {file_path} to {config['path_prefix']} at {sftp_client.getcwd()} as {temp_remote_file}")
 
                 confirm = config.get("confirm", True)
@@ -127,7 +135,7 @@ def upload(args):
                         temp_files_created.append((current_path, temp_remote_file))
                     except Exception as e:
                         logger.error(f"Failed while trying to upload file with remote path {file_path} to {config['path_prefix']} at {sftp_client.getcwd()}")
-                        raise Exception(e)
+                        raise e
                 else:
                     raise IOError(f'Could not find localFile {file_path} !!')
 
@@ -135,30 +143,34 @@ def upload(args):
                     sftp_client.chdir(prev_cwd)
 
         # Rename all uploaded files by removing .tmp extension
-        logger.info("All files uploaded. Renaming temporary files...")
-        for path, temp_file, final_file in uploaded_files:
-            try:
-                sftp_client.chdir(path)
-                
-                # Check if final file already exists
+        if len(uploaded_files) > 0 and all(len(file) == 3 for file in uploaded_files):
+            logger.info(f"Files {[file[2] for file in uploaded_files]} uploaded. Renaming temporary files...")
+            for path, temp_file, final_file in uploaded_files:
                 try:
-                    sftp_client.stat(final_file)
-                    if config.get("overwrite", False):
-                        sftp_client.remove(final_file)
-                        logger.info(f"Removed existing file: {final_file}")
-                    else:
-                        raise Exception(f"File {final_file} already exists and overwrite is not enabled")
-                except FileNotFoundError:
-                    pass  # File doesn't exist, which is fine
+                    sftp_client.chdir(path)
                     
-                sftp_client.rename(temp_file, final_file)
-                logger.info(f"Renamed {temp_file} to {final_file}")
-            except Exception as e:
-                logger.error(f"Failed to rename {temp_file} to {final_file}: {str(e)}")
-                raise e
+                    # Check if final file already exists
+                    try:
+                        sftp_client.stat(final_file)
+                        if config.get("overwrite", False):
+                            sftp_client.remove(final_file)
+                            logger.info(f"Removed existing file: {final_file}")
+                        else:
+                            logger.info(f"File {final_file} already exists and overwrite is not enabled")
+                            sftp_client.remove(temp_file)
+                            temp_files_created.remove((path, temp_file))
+                            logger.info(f"Cleaned up temporary file: {temp_file}")
+                            continue
+                    except FileNotFoundError:
+                        pass  # File doesn't exist, which is fine
+                        
+                    sftp_client.rename(temp_file, final_file)
+                    logger.info(f"Renamed {temp_file} to {final_file}")
+                except Exception as e:
+                    logger.error(f"Failed to rename {temp_file} to {final_file}: {str(e)}")
+                    raise e
     except Exception as e:
         logger.error("Error during upload process. Cleaning up temporary files...")
-        logger.error(e)
         # Clean up temporary files
         for cleanup_path, temp_file in temp_files_created:
             try:
@@ -170,6 +182,7 @@ def upload(args):
                     logger.warning(f"Failed to clean up temporary file: {temp_file}")
             except:
                 logger.warning(f"Failed to access path for cleanup: {cleanup_path}")
+        raise e
     finally:
         logger.info(f"Closing SFTP connection...")
         sftp_conection.close()
