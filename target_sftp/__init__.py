@@ -42,6 +42,7 @@ def parse_args():
 def upload(args):
     logger.info("Checking if there is at least one file to upload...")
     uploaded_files = []  # Initialize the list here
+    temp_files_created = []  # Track temporary files for cleanup
     if not os.path.exists(args.config["input_path"]):
         raise Exception(f"Input path {args.config['input_path']} does not exist")
     has_files = False
@@ -82,83 +83,96 @@ def upload(args):
             except Exception as e:
                 # logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
                 raise e
-
-    for root, dirs, files in os.walk(config["input_path"]):
-        for dir in dirs:
-            try:
-                sftp_client.mkdir(dir)
-                logger.info(f"Created remote folder {dir}")
-            except:
-                logger.info(f"Remote folder {dir} already exists")
-        if isinstance(files,list) and len(files) == 0:
-            logger.info(f"No files in {root}. Skipping...")
-        
-        logger.info(f"Root {root}. Dirs {dirs}. Files to upload: {files}")
-        for file in files: #upload all files
-            file_path = os.path.join(root, file)
-            stripped_file_path = file_path.replace(config['input_path'] + "/", "",1)
-            prev_cwd = None
-
-            if "/" in stripped_file_path:
-                prev_cwd = sftp_client.getcwd()
-                # Go into the folder
-                sftp_client.chdir(stripped_file_path.split("/")[0])
-
-            # Add .tmp extension for upload
-            temp_remote_file = f"{file}.tmp"
-            
-            logger.info(f"Uploading {file} with local path {file_path} to {config['path_prefix']} at {sftp_client.getcwd()} as {temp_remote_file}")
-
-            if config.get("overwrite", False):
-                # Check if the file exists on the remote server
+    try:
+        for root, dirs, files in os.walk(config["input_path"]):
+            for dir in dirs:
                 try:
-                    sftp_client.stat(temp_remote_file)
-                    sftp_client.remove(temp_remote_file)
-                    logger.info(f"Removed existing temporary file: {temp_remote_file}")
+                    sftp_client.mkdir(dir)
+                    logger.info(f"Created remote folder {dir}")
+                except:
+                    logger.info(f"Remote folder {dir} already exists")
+            if isinstance(files,list) and len(files) == 0:
+                logger.info(f"No files in {root}. Skipping...")
+            
+            logger.info(f"Root {root}. Dirs {dirs}. Files to upload: {files}")
+            for file in files:
+                file_path = os.path.join(root, file)
+                stripped_file_path = file_path.replace(config['input_path'] + "/", "",1)
+                prev_cwd = None
+
+                if "/" in stripped_file_path:
+                    prev_cwd = sftp_client.getcwd()
+                    sftp_client.chdir(stripped_file_path.split("/")[0])
+
+                # Check if final file exists before creating temp file
+                try:
+                    sftp_client.stat(file)
+                    if not config.get("overwrite", False):
+                        logger.info(f"Skipping {file} as it already exists and overwrite is not enabled")
+                        continue
                 except FileNotFoundError:
                     pass
 
-            confirm = config.get("confirm", True)
-            if os.path.isfile(file_path):
-                try:
-                    sftp_client.put(file_path, temp_remote_file, confirm=confirm)
-                    # Store the full path for renaming later
-                    current_path = sftp_client.getcwd()
-                    uploaded_files.append((current_path, temp_remote_file, file))
-                except Exception as e:
-                    logger.info(f"Failed while trying to upload file with remote path {file_path} to {config['path_prefix']} at {sftp_client.getcwd()}")
-                    raise Exception(e)
-            else:
-                raise IOError(f'Could not find localFile {file_path} !!')
-
-            if prev_cwd is not None:
-                sftp_client.chdir(prev_cwd)
-
-    # Rename all uploaded files by removing .tmp extension
-    logger.info("All files uploaded. Renaming temporary files...")
-    for path, temp_file, final_file in uploaded_files:
-        try:
-            sftp_client.chdir(path)
-            
-            # Check if final file already exists
-            try:
-                sftp_client.stat(final_file)
-                if config.get("overwrite", False):
-                    sftp_client.remove(final_file)
-                    logger.info(f"Removed existing file: {final_file}")
-                else:
-                    raise Exception(f"File {final_file} already exists and overwrite is not enabled")
-            except FileNotFoundError:
-                pass  # File doesn't exist, which is fine
+                # Add .tmp extension for upload
+                temp_remote_file = f"{file}.tmp"
                 
-            sftp_client.rename(temp_file, final_file)
-            logger.info(f"Renamed {temp_file} to {final_file}")
-        except Exception as e:
-            logger.error(f"Failed to rename {temp_file} to {final_file}: {str(e)}")
-            raise e
+                logger.info(f"Uploading {file} with local path {file_path} to {config['path_prefix']} at {sftp_client.getcwd()} as {temp_remote_file}")
 
-    logger.info(f"Closing SFTP connection...")
-    sftp_conection.close()
+                confirm = config.get("confirm", True)
+                if os.path.isfile(file_path):
+                    try:
+                        sftp_client.put(file_path, temp_remote_file, confirm=confirm)
+                        current_path = sftp_client.getcwd()
+                        uploaded_files.append((current_path, temp_remote_file, file))
+                        temp_files_created.append((current_path, temp_remote_file))
+                    except Exception as e:
+                        logger.error(f"Failed while trying to upload file with remote path {file_path} to {config['path_prefix']} at {sftp_client.getcwd()}")
+                        raise Exception(e)
+                else:
+                    raise IOError(f'Could not find localFile {file_path} !!')
+
+                if prev_cwd is not None:
+                    sftp_client.chdir(prev_cwd)
+
+        # Rename all uploaded files by removing .tmp extension
+        logger.info("All files uploaded. Renaming temporary files...")
+        for path, temp_file, final_file in uploaded_files:
+            try:
+                sftp_client.chdir(path)
+                
+                # Check if final file already exists
+                try:
+                    sftp_client.stat(final_file)
+                    if config.get("overwrite", False):
+                        sftp_client.remove(final_file)
+                        logger.info(f"Removed existing file: {final_file}")
+                    else:
+                        raise Exception(f"File {final_file} already exists and overwrite is not enabled")
+                except FileNotFoundError:
+                    pass  # File doesn't exist, which is fine
+                    
+                sftp_client.rename(temp_file, final_file)
+                logger.info(f"Renamed {temp_file} to {final_file}")
+            except Exception as e:
+                logger.error(f"Failed to rename {temp_file} to {final_file}: {str(e)}")
+                raise e
+    except Exception as e:
+        logger.error("Error during upload process. Cleaning up temporary files...")
+        logger.error(e)
+        # Clean up temporary files
+        for cleanup_path, temp_file in temp_files_created:
+            try:
+                sftp_client.chdir(cleanup_path)
+                try:
+                    sftp_client.remove(temp_file)
+                    logger.info(f"Cleaned up temporary file: {temp_file}")
+                except:
+                    logger.warning(f"Failed to clean up temporary file: {temp_file}")
+            except:
+                logger.warning(f"Failed to access path for cleanup: {cleanup_path}")
+    finally:
+        logger.info(f"Closing SFTP connection...")
+        sftp_conection.close()
 
 
 def main():
