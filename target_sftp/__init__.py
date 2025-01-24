@@ -320,8 +320,8 @@ def prepare_upload_tree(
 def cleanup_previous_artifacts(sftp_client: SFTPClient, root_path: str) -> None:
     """
     Clean up any artifacts from previous failed uploads in this order:
-    1. Restore any .target_old files to their original names
-    2. Remove any remaining .target_tmp files
+    1. Restore any .old.tmp files to their original names
+    2. Remove any remaining .tmp files
     3. Remove empty _target_tmp directories
     
     Args:
@@ -344,19 +344,19 @@ def cleanup_previous_artifacts(sftp_client: SFTPClient, root_path: str) -> None:
                 else:
                     files.append((full_path, name))
             
-            # Step 1: Restore .target_old files first
+            # Step 1: Restore .old.tmp files first
             for full_path, name in files:
-                if name.endswith('.target_old'):
+                if name.endswith('.old.tmp'):
                     try:
-                        original_path = full_path[:-11]  # Remove '.target_old'
+                        original_path = full_path[:-11]  # Remove '.old.tmp'
                         sftp_client.rename(full_path, original_path)
                         logger.info(f"Cleanup: Restored {full_path} to {original_path}")
                     except Exception as e:
                         logger.warning(f"Cleanup: Failed to restore {full_path}: {str(e)}")
             
-            # Step 2: Remove .target_tmp files
+            # Step 2: Remove .tmp files
             for full_path, name in files:
-                if name.endswith('.target_tmp'):
+                if name.endswith('.tmp'):
                     try:
                         sftp_client.remove(full_path)
                         logger.info(f"Cleanup: Removed leftover file {full_path}")
@@ -380,8 +380,8 @@ def cleanup_previous_artifacts(sftp_client: SFTPClient, root_path: str) -> None:
             logger.error(f"Cleanup: Error accessing directory {path}: {str(e)}")
 
     logger.info("Starting cleanup of previous upload artifacts...")
-    logger.info("Step 1: Restoring any .target_old files to their original names...")
-    logger.info("Step 2: Removing any remaining .target_tmp files...")
+    logger.info("Step 1: Restoring any .old.tmp files to their original names...")
+    logger.info("Step 2: Removing any remaining .tmp files...")
     logger.info("Step 3: Removing empty _target_tmp directories...")
     cleanup_directory(root_path)
     logger.info("Cleanup completed")
@@ -392,10 +392,10 @@ def execute_upload(sftp_client: SFTPClient, prepared_tree: 'FolderTree.Folder', 
     
     Process:
     1. Clean up any artifacts from previous failed uploads
-    2. Upload all files as .target_tmp
-    3. If overwrite enabled, rename existing files to .target_old
-    4. Rename .target_tmp files to their final names
-    5. Clean up .target_old files
+    2. Upload all files as .tmp
+    3. If overwrite enabled, rename existing files to .old.tmp
+    4. Rename .tmp files to their final names
+    5. Clean up .old.tmp files
     
     Args:
         sftp_client: Paramiko SFTP client instance
@@ -413,13 +413,13 @@ def execute_upload(sftp_client: SFTPClient, prepared_tree: 'FolderTree.Folder', 
         # Step 1: Clean up any artifacts from previous failed uploads
         cleanup_previous_artifacts(sftp_client, os.path.dirname(prepared_tree.files[0].remote_path) if prepared_tree.files else "/")
         
-        # Step 2: Upload all files as .target_tmp
+        # Step 2: Upload all files as .tmp
         def upload_folder(folder: 'FolderTree.Folder') -> None:
             for file in folder.files:
                 if not file.should_be_copied:
                     continue
                     
-                tmp_path = f"{file.remote_path}.target_tmp"
+                tmp_path = f"{file.remote_path}.tmp"
                 logger.info(f"Uploading {file.local_path} to {tmp_path}")
                 
                 # Create parent directories if they don't exist
@@ -444,7 +444,7 @@ def execute_upload(sftp_client: SFTPClient, prepared_tree: 'FolderTree.Folder', 
                         created_directories.append(dir_path)
                         logger.info(f"Created directory {dir_path}")
                 
-                # Upload with .target_tmp extension
+                # Upload with .tmp extension
                 sftp_client.put(file.local_path, tmp_path)
                 uploaded_tmp_files.append((
                     os.path.dirname(file.remote_path),
@@ -458,12 +458,12 @@ def execute_upload(sftp_client: SFTPClient, prepared_tree: 'FolderTree.Folder', 
         upload_folder(prepared_tree)
         logger.info(f"Successfully uploaded {len(uploaded_tmp_files)} temporary files")
         
-        # Step 3: If overwrite enabled, rename existing files to .target_old
+        # Step 3: If overwrite enabled, rename existing files to .old.tmp
         if overwrite:
             for path, _, final_name in uploaded_tmp_files:
                 try:
                     original_path = os.path.join(path, final_name)
-                    old_path = f"{original_path}.target_old"
+                    old_path = f"{original_path}.old.tmp"
                     
                     # Check if file exists before renaming
                     try:
@@ -477,7 +477,7 @@ def execute_upload(sftp_client: SFTPClient, prepared_tree: 'FolderTree.Folder', 
                 except Exception as e:
                     raise Exception(f"Failed to rename existing file {original_path}: {str(e)}")
         
-        # Step 4: Rename .target_tmp files to final names
+        # Step 4: Rename .tmp files to final names
         for path, tmp_name, final_name in uploaded_tmp_files:
             try:
                 tmp_path = os.path.join(path, tmp_name)
@@ -487,10 +487,10 @@ def execute_upload(sftp_client: SFTPClient, prepared_tree: 'FolderTree.Folder', 
             except Exception as e:
                 raise Exception(f"Failed to rename temporary file {tmp_path}: {str(e)}")
         
-        # Step 5: Clean up .target_old files
+        # Step 5: Clean up .old.tmp files
         for path, filename in renamed_old_files:
             try:
-                old_path = os.path.join(path, f"{filename}.target_old")
+                old_path = os.path.join(path, f"{filename}.old.tmp")
                 sftp_client.remove(old_path)
                 logger.info(f"Removed old file {old_path}")
             except Exception as e:
@@ -499,7 +499,7 @@ def execute_upload(sftp_client: SFTPClient, prepared_tree: 'FolderTree.Folder', 
     except Exception as e:
         logger.error("Upload failed, initiating rollback...")
         
-        # Rollback: Remove all .target_tmp files
+        # Rollback: Remove all .tmp files
         for path, tmp_name, _ in uploaded_tmp_files:
             try:
                 tmp_path = os.path.join(path, tmp_name)
@@ -508,10 +508,10 @@ def execute_upload(sftp_client: SFTPClient, prepared_tree: 'FolderTree.Folder', 
             except:
                 logger.warning(f"Rollback: Failed to remove temporary file {tmp_path}")
         
-        # Rollback: Restore .target_old files to their original names
+        # Rollback: Restore .old.tmp files to their original names
         for path, filename in renamed_old_files:
             try:
-                old_path = os.path.join(path, f"{filename}.target_old")
+                old_path = os.path.join(path, f"{filename}.old.tmp")
                 original_path = os.path.join(path, filename)
                 sftp_client.rename(old_path, original_path)
                 logger.info(f"Rollback: Restored {old_path} to {original_path}")
