@@ -95,6 +95,8 @@ def upload(args):
         logger.info(f"Root {root}. Dirs {dirs}. Files to upload: {files}")
         for file in files: #upload all files
             file_path = os.path.join(root, file)
+            # NOTE: Windows server does not allow certain characters, we need to remove for it to work
+            file = file.replace("|", "")
             stripped_file_path = file_path.replace(config['input_path'] + "/", "",1)
             prev_cwd = None
 
