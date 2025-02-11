@@ -3,6 +3,7 @@ import os
 import json
 import argparse
 import logging
+import re
 
 from target_sftp import client
 
@@ -96,7 +97,7 @@ def upload(args):
         for file in files: #upload all files
             file_path = os.path.join(root, file)
             # NOTE: Windows server does not allow certain characters, we need to remove for it to work
-            file = file.replace("|", "")
+            file = re.sub(r'[\\:\*\?"<>|]', "", file)
             stripped_file_path = file_path.replace(config['input_path'] + "/", "",1)
             prev_cwd = None
 
