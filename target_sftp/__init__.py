@@ -216,10 +216,11 @@ def upload(args: argparse.Namespace) -> None:
 
     logger.info(f"Exporting data...")
     config = args.config
-    sftp_connection = client.connection(config)
-    sftp_client = sftp_connection.sftp
     
-    try:
+    # Use context manager for proper connection lifecycle management
+    with client.connection(config) as sftp_connection:
+        sftp_client = sftp_connection.sftp
+        
         output_path = config["path_prefix"]
         export_path = output_path.rstrip("/") or "/"
 
@@ -235,10 +236,6 @@ def upload(args: argparse.Namespace) -> None:
         
         execute_upload(sftp_client, prepared_tree, config.get("overwrite", False))
         logger.info("Upload completed successfully")
-        
-    finally:
-        logger.info("Closing SFTP connection...")
-        sftp_connection.close()
 
 def has_minimum_amount_of_files(args: argparse.Namespace) -> bool:
     if not os.path.exists(args.config["input_path"]):

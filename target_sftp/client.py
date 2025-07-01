@@ -72,10 +72,24 @@ class SFTPConnection():
         self.__sftp = sftp
 
     def close(self):
+        """Close SFTP connection with proper error handling"""
         if self.__sftp:
-            self.__sftp.close()
+            try:
+                self.__sftp.close()
+                LOGGER.info("SFTP client closed successfully")
+            except Exception as e:
+                LOGGER.warning(f"Error closing SFTP client: {str(e)}")
+            finally:
+                self.__sftp = None
+        
         if self.transport:
-            self.transport.close()
+            try:
+                self.transport.close()
+                LOGGER.info("Transport closed successfully")
+            except Exception as e:
+                LOGGER.warning(f"Error closing transport: {str(e)}")
+            finally:
+                self.transport = None
 
     def match_files_for_table(self, files, table_name, search_pattern):
         LOGGER.info("Searching for files for table '%s', matching pattern: %s", table_name, search_pattern)
@@ -87,6 +101,15 @@ class SFTPConnection():
 
     def is_directory(self, file_attr):
         return stat.S_ISDIR(file_attr.st_mode)
+
+    def __enter__(self):
+        """Context manager entry point"""
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        """Context manager exit point - ensures cleanup happens"""
+        self.close()
+        return False  # Don't suppress exceptions
 
 def connection(config):
     return SFTPConnection(config['host'],
