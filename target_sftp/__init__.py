@@ -46,6 +46,9 @@ def upload(args):
         raise Exception(f"Input path {args.config['input_path']} does not exist")
     has_files = False
     for root, dirs, files in os.walk(args.config["input_path"]):
+        if root == args.config["input_path"] and isinstance(files, list) and "target-state.json" in files:
+            files.remove("target-state.json")
+        
         if len(files) > 0:
             has_files = True
             logger.info(f"Found {len(files)} files in {root}")
@@ -84,6 +87,9 @@ def upload(args):
                 raise e
 
     for root, dirs, files in os.walk(config["input_path"]):
+        if root == config["input_path"] and isinstance(files, list) and "target-state.json" in files:
+            files.remove("target-state.json")
+
         for dir in dirs:
             try:
                 sftp_client.mkdir(dir)
@@ -103,6 +109,8 @@ def upload(args):
 
             if "/" in stripped_file_path:
                 prev_cwd = sftp_client.getcwd()
+                if prev_cwd and not prev_cwd.startswith("/"):
+                    prev_cwd = f"/{prev_cwd}"
                 # Go into the folder
                 sftp_client.chdir(stripped_file_path.split("/")[0])
 
