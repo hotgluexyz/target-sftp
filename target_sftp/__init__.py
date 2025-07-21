@@ -103,6 +103,8 @@ def upload(args):
 
             if "/" in stripped_file_path:
                 prev_cwd = sftp_client.getcwd()
+                if prev_cwd and not prev_cwd.startswith("/"):
+                    prev_cwd = f"/{prev_cwd}"
                 # Go into the folder
                 sftp_client.chdir(stripped_file_path.split("/")[0])
 
