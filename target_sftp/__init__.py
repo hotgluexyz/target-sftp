@@ -46,8 +46,8 @@ def upload(args):
         raise Exception(f"Input path {args.config['input_path']} does not exist")
     has_files = False
     for root, dirs, files in os.walk(args.config["input_path"]):
-        if root == args.config["input_path"] and isinstance(files, list) and "target-state.json" in files:
-            files.remove("target-state.json")
+        if root == args.config["input_path"] and isinstance(files, list) and "target_state.json" in files:
+            files.remove("target_state.json")
         
         if len(files) > 0:
             has_files = True
@@ -87,8 +87,8 @@ def upload(args):
                 raise e
 
     for root, dirs, files in os.walk(config["input_path"]):
-        if root == config["input_path"] and isinstance(files, list) and "target-state.json" in files:
-            files.remove("target-state.json")
+        if root == config["input_path"] and isinstance(files, list) and "target_state.json" in files:
+            files.remove("target_state.json")
 
         for dir in dirs:
             try:
