@@ -163,6 +163,10 @@ def build_remote_tree(sftp_client: SFTPClient, root_path: str) -> FolderTree.Fol
     
     # Store original working directory
     original_path = sftp_client.getcwd()
+
+    # log current working directory
+    cwd = sftp_client.getcwd()
+    logger.info(f"Current working directory: {cwd}")
     
     try:
         # Change to root path if it's not empty
@@ -171,6 +175,7 @@ def build_remote_tree(sftp_client: SFTPClient, root_path: str) -> FolderTree.Fol
         
         def scan_directory(current_path, parent_folder):
             try:
+                logger.info(f"Scanning directory: {current_path}")
                 # List directory contents
                 for entry in sftp_client.listdir_attr(current_path):
                     name = entry.filename
@@ -222,6 +227,8 @@ def upload(args: argparse.Namespace) -> None:
     try:
         output_path = config["path_prefix"]
         export_path = output_path.rstrip("/") or "/"
+        if not export_path.startswith("/"):
+            export_path = f"/{export_path}"
 
         local_tree = build_local_tree(config["input_path"])
         logger.debug(f"Local directory tree structure: {local_tree}")
