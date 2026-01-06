@@ -1,0 +1,14 @@
+{
+  "host": "sftp.example.com",
+  "username": "your_username",
+  
+  "password": "your_password",
+  "private_key_file": "~/.ssh/id_rsa",
+  "private_key": "-----BEGIN OPENSSH PRIVATE KEY-----\nYOUR_KEY_CONTENT_HERE\n-----END OPENSSH PRIVATE KEY-----",
+  
+  "port": 22,
+  
+  "input_path": "/path/to/local/directory",
+  "path_prefix": "/remote/destination/path",
+  "overwrite": false
+}
