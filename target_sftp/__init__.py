@@ -57,7 +57,7 @@ def upload(args):
         logger.info(f"No files to upload in {args.config['input_path']}")
         return
     
-    logger.info(f"Exporting data...")
+    logger.info("Exporting data...")
     config = args.config
     # Upload all data in input_path to sftp
     ## I don't think preserving directory structure matters, a nice to have, but error-prone
@@ -75,15 +75,17 @@ def upload(args):
                 # First attempt to create the folder
                 try:
                     sftp_client.mkdir(dir)
+                    logger.info(f"Created remote directory: {dir}")
                 except Exception as e:
-                    # logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
                     # If it already exists, we ignore
+                    logger.debug(f"Directory '{dir}' may already exist: {type(e).__name__}: {str(e)}")
                     pass
 
                 # Switch into the dir if it exists
-                sftp_client.chdir(dir) #will change if folder already exists
+                sftp_client.chdir(dir)
+                logger.debug(f"Changed to directory: {sftp_client.getcwd()}")
             except Exception as e:
-                # logger.exception(f"Failed to create folder {dir} in path {sftp_client.getcwd()}. See details below")
+                logger.error(f"Failed to navigate to directory '{dir}': {type(e).__name__}: {str(e)}")
                 raise e
 
     for root, dirs, files in os.walk(config["input_path"]):
@@ -93,9 +95,9 @@ def upload(args):
         for dir in dirs:
             try:
                 sftp_client.mkdir(dir)
-                logger.info(f"Created remote folder {dir}")
-            except:
-                logger.info(f"Remote folder {dir} already exists")
+                logger.info(f"Created remote folder: {dir}")
+            except Exception as e:
+                logger.debug(f"Remote folder '{dir}' may already exist: {type(e).__name__}: {str(e)}")
         if isinstance(files,list) and len(files) == 0:
             logger.info(f"No files in {root}. Skipping...")
         
@@ -112,10 +114,13 @@ def upload(args):
                 if prev_cwd and not prev_cwd.startswith("/"):
                     prev_cwd = f"/{prev_cwd}"
                 # Go into the folder
-                sftp_client.chdir(stripped_file_path.split("/")[0])
+                target_dir = stripped_file_path.split("/")[0]
+                logger.debug(f"Changing to subdirectory: {target_dir}")
+                sftp_client.chdir(target_dir)
 
             # Save the file
-            logger.info(f"Uploading {file} with local path {file_path} to {config['path_prefix']} at {sftp_client.getcwd()}")
+            remote_cwd = sftp_client.getcwd() or "/"
+            logger.info(f"Uploading file '{file}' (local: {file_path}) to remote directory: {remote_cwd}")
 
             # if we should overwrite files we should purge existing one before upload
             if config.get("overwrite", False):
@@ -129,22 +134,32 @@ def upload(args):
                 # If the file exists, delete it
                 if file_exists:
                     sftp_client.remove(file)
-                    logger.info(f"Removed existing file: {file}")
+                    logger.info(f"Removed existing remote file: {file}")
 
             confirm = config.get("confirm", True)
             if os.path.isfile(file_path):
                 try:
+                    logger.debug(f"Starting upload: local={file_path}, remote={file}, confirm={confirm}")
                     sftp_client.put(file_path, file, confirm=confirm)
+                    logger.info(f"Successfully uploaded file '{file}' to remote path: {remote_cwd}/{file}")
                 except Exception as e:
-                    logger.info(f"Failed while trying to upload file with remote path {file_path} to {config['path_prefix']} at {sftp_client.getcwd()}")
+                    logger.error(
+                        f"Failed to upload file. "
+                        f"Local path: {file_path}, "
+                        f"Remote directory: {remote_cwd}, "
+                        f"Remote filename: {file}, "
+                        f"Exception type: {type(e).__name__}, "
+                        f"Exception message: {str(e)}"
+                    )
                     raise Exception(e)
             else:
                 raise IOError(f'Could not find localFile {file_path} !!')
 
             if prev_cwd is not None:
+                logger.debug(f"Changing back to previous directory: {prev_cwd}")
                 sftp_client.chdir(prev_cwd)
         
-    logger.info(f"Closing SFTP connection...")
+    logger.info("Closing SFTP connection...")
     sftp_conection.close()
 
 
