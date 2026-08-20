@@ -147,6 +147,16 @@ def build_local_tree(root_path: str) -> FolderTree.Folder:
     
     return root_folder
 
+def log_visible_directories(sftp_client: SFTPClient, path: str) -> None:
+    try:
+        directories = [
+            entry.filename for entry in sftp_client.listdir_attr(path)
+            if not entry.filename.startswith('.') and stat.S_ISDIR(entry.st_mode)
+        ]
+        logger.info(f"Visible directories in '{path}': {directories}")
+    except Exception:
+        logger.warning(f"Could not list directories in '{path}'")
+
 def build_remote_tree(sftp_client: SFTPClient, root_path: str) -> FolderTree.Folder:
     """
     Build a FolderTree structure by scanning a remote SFTP directory
@@ -171,7 +181,15 @@ def build_remote_tree(sftp_client: SFTPClient, root_path: str) -> FolderTree.Fol
     try:
         # Change to root path if it's not empty
         if root_path and root_path != "/":
-            sftp_client.chdir(root_path)
+            try:
+                sftp_client.chdir(root_path)
+            except Exception as e:
+                logger.error(f"Could not access path_prefix '{root_path}': {e}")
+                parent_path = os.path.dirname(root_path.rstrip('/')) or '/'
+                log_visible_directories(sftp_client, parent_path)
+                if parent_path != '/':
+                    log_visible_directories(sftp_client, '/')
+                raise
         
         def scan_directory(current_path, parent_folder):
             try:
