@@ -154,8 +154,8 @@ def log_visible_directories(sftp_client: SFTPClient, path: str) -> None:
             if not entry.filename.startswith('.') and stat.S_ISDIR(entry.st_mode)
         ]
         logger.info(f"Visible directories in '{path}': {directories}")
-    except OSError:
-        pass
+    except Exception:
+        logger.warning(f"Could not list directories in '{path}'")
 
 def build_remote_tree(sftp_client: SFTPClient, root_path: str) -> FolderTree.Folder:
     """
@@ -183,10 +183,12 @@ def build_remote_tree(sftp_client: SFTPClient, root_path: str) -> FolderTree.Fol
         if root_path and root_path != "/":
             try:
                 sftp_client.chdir(root_path)
-            except OSError as e:
-                parent_path = os.path.dirname(root_path.rstrip('/')) or '/'
+            except Exception as e:
                 logger.error(f"Could not access path_prefix '{root_path}': {e}")
+                parent_path = os.path.dirname(root_path.rstrip('/')) or '/'
                 log_visible_directories(sftp_client, parent_path)
+                if parent_path != '/':
+                    log_visible_directories(sftp_client, '/')
                 raise
         
         def scan_directory(current_path, parent_folder):
