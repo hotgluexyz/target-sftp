@@ -9,6 +9,7 @@ setup(
     author='hotglue',
     url='https://hotglue.xyz',
     classifiers=['Programming Language :: Python :: 3 :: Only'],
+    python_requires='>=3.7',
     py_modules=['target_sftp'],
     install_requires=[
         'argparse==1.4.0',
