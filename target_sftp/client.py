@@ -4,6 +4,7 @@ import re
 import stat
 import time
 from io import StringIO
+from typing import Optional
 import backoff
 import paramiko
 import singer
@@ -31,7 +32,7 @@ class SFTPConnection():
         self.__sftp = None
         self._setup_key(private_key_file, private_key, password)
 
-    def _setup_key(self, private_key_file: str | None = None, private_key: str | None = None, passphrase: str | None = None) -> None:
+    def _setup_key(self, private_key_file: Optional[str] = None, private_key: Optional[str] = None, passphrase: Optional[str] = None) -> None:
         if not private_key_file and not private_key:
             return  # No key provided, skip setup
         

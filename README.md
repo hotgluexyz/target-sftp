@@ -2,11 +2,15 @@
 
 A Singer target for exporting data to SFTP servers. Uploads local directories to remote SFTP locations with transactional safety and support for multiple SSH key types.
 
+## Requirements
+
+Tested on Python 3.7, 3.10, and 3.14. Python 3.7 is end-of-life; a future `cryptography` release may drop support for it.
+
 ## Installation
 
-1. Set Python version with pyenv:
+1. Set Python version with pyenv (example):
 ```bash
-pyenv local 3.10
+pyenv local 3.10.19
 ```
 
 2. Create and activate a virtual environment:
